@@ -42,3 +42,27 @@ exports.addJob = async (req, res) => {
         res.status(500).json({ message: 'Error adding job', error });
     }
 };
+
+// Add delete job function
+exports.deleteJob = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const deletedJob = await Job.findByIdAndDelete(id);
+        
+        if (!deletedJob) {
+            return res.status(404).json({ message: 'Job not found' });
+        }
+        
+        res.status(200).json({ 
+            success: true, 
+            message: 'Job deleted successfully' 
+        });
+    } catch (error) {
+        console.error('Delete job error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Error deleting job', 
+            error: error.message 
+        });
+    }
+};

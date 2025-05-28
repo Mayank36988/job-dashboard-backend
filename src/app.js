@@ -2,35 +2,56 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const jobRoutes = require('./routes/jobs');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
-// Middleware
-app.use(cors({
-    origin: ['https://your-vercel-app-url.vercel.app', 'http://localhost:3000'],
-    methods: ['GET', 'POST'],
-    allowedHeaders: ['Content-Type']
-}));
-app.use(express.json());
-app.use(helmet());
-app.use(rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100 // limit each IP to 100 requests per windowMs
-}));
-app.use(jobRoutes);
-
-// MongoDB connection
+// MongoDB Connection with updated options
 mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
-    useUnifiedTopology: true
+    useUnifiedTopology: true,
+    serverSelectionTimeoutMS: 5000,
+    ssl: true,
+    retryWrites: true,
+    w: 'majority'
 })
-.then(() => console.log('MongoDB connected successfully'))
-.catch(err => console.error('MongoDB connection error:', err));
+.then(() => {
+    console.log('🌟 Connected to MongoDB Atlas successfully!');
+})
+.catch((error) => {
+    console.error('❌ MongoDB connection error:', error);
+    process.exit(1);
+});
 
+// Connection event handlers
+mongoose.connection.on('connected', () => {
+    console.log('🔗 MongoDB connected');
+});
+
+mongoose.connection.on('error', (err) => {
+    console.error('MongoDB error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+    console.log('📴 MongoDB disconnected');
+});
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Routes
+app.use('/api', require('./routes/jobs'));
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({
+        success: false,
+        message: 'Something went wrong!'
+    });
+});
+
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+    console.log(`🚀 Server running on port ${PORT}`);
 });
